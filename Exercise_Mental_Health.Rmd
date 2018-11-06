@@ -1,0 +1,228 @@
+---
+title: "Identifying potential correlations between mental health and exercise"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load the dataset
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+* * *
+
+## Part 1: Data
+The data was collected by a phone survey. In 1984 the data was collected by landline telephones, and later on mobile telephones were called to collect data. It is possible that the population was not evenly sampled, as those people who have jobs or are extremely busy may not have been able to respond to the survey. Additionally, because the data was collected from 1984 to 2013, it is possible that conclusions drawn using the entire dataset may not be generalizable to the whole population. The data may not have been randomly sampled. 
+
+Also, a formal experiment with a treatment group and control group has not been performed, so we can not state with certainty that vigorous exercise causes a better state of mental wellbeing. Random assignment was not used in this case. It is possible that there may be other relationships that confound conclusions, such as somebody who is physically disabled that can not exercise and may be more likely to have bad mental health.
+
+A list of the variables we from the dataset that may be related to the area we are interested in:
+
+-Mental Health Variables:
+menthlth: Number Of Days Mental Health Not Good
+addepev2: Ever Told You Had A Depressive Disorder
+qlmentl2: How Many Days Depressed In Past 30 Days
+qlstres2: How Many Days Felt Anxious In Past 30 Days
+misnervs: How Often Feel Nervous Past 30 Days
+mishopls: How Often Feel Hopeless Past 30 Days
+misrstls: How Often Feel Restless Past 30 Days
+misdeprd: How Often Feel Depressed Past 30 Days
+miseffrt: How Often Feel Everything Was An Effort Past 30 Days
+miswtles: How Often Feel Worthless Past 30 Days
+misnowrk: Emotional Problem Kept You From Doing Work Past 30 Days
+emtsuprt: How Often Get Emotional Support Needed
+lsatisfy: Satisfaction With Life
+
+-Aerobic Exercise Variables:
+exerany2: Exercise In Past 30 Days
+exract11: Type Of Physical Activity
+exeroft1: How Many Times Walking, Running, Jogging, Or Swimming
+exerhmm1: Minutes Or Hours Walking, Running, Jogging, Or Swimming
+exract21: Other Type Of Physical Activity Giving Most Exercise During Past Month
+exeroft2: How Many Times Walking, Running, Jogging, Or Swimming
+exerhmm2: Minutes Or Hours Walking, Running, Jogging, Or Swimming
+_totinda: Leisure Time Physical Activity Calculated Variable
+metvl11_: Activity Met Value For First Activity
+metvl21_: Activity Met Value For Second Activity
+maxvo2_: Estimated Age-Gender Specific Maximum Oxygen Consumption
+fc60_: Estimated Functional Capacity
+actin11_: Estimated Activity Intensity For First Activity
+actin21_: Estimated Activity Intensity For Second Activity
+padur1_: Minutes Of First Activity
+padur2_: Minutes Of Second Activity
+pafreq1_: Physical Activity Frequency Per Week For First Activity
+pafreq2_: Physical Activity Frequency Per Week For Second Activity
+_minac11: Minutes Of Physical Activity Per Week For First Activity
+_minac21: Minutes Of Physical Activity Per Week For Second Activity
+strfreq_: Strength Activity Frequency Per Week
+pamiss1_: Missing Physical Activity Data
+pamin11_: Minutes Of Physical Activity Per Week For First Activity
+pamin21_: Minutes Of Physical Activity Per Week For Second Activity
+pa1min_: Minutes Of Total Physical Activity Per Week
+pavig11_: Minutes Of Vigorous Physical Activity Per Week For First Activity
+pavig21_: Minutes Of Vigorousphysical Activity Per Week For Second Activity
+pa1vigm_: Minutes Of Total Vigorous Physical Activity Per Week
+_pacat1: Physical Activity Categories
+_paindx1: Physical Activity Index
+_pa150r2: 150 Minute Physical Activity Calculated Variable
+_pa300r2: 300 Minute Physical Activity Calculated Variable
+_pa30021: 300 Minute Physical Activity 2-Level Calculated Variable
+
+* * *
+
+## Part 2: Research questions
+
+I would like to explore the dataset to determine if there is any relationship between physical activities and the state of someones mental health. 
+
+**Research quesion 1: For individuals that engaged in physical activities in the last 30 days, what was the average number of days they reported having bad mental health? What was the average days for those that did not engage in any activities?**
+
+**Research quesion 2: What is the average number of bad mental health days for people who engaged in low, medium, and high intensity activities?**
+
+**Research quesion 3: For those that do vigorous exercise, versus less than vigorous exercise, what distribution of them felt significantly nervous, hopeless, restless, or depressed in the past 30 days? The term "significantly" implies that the respondent indicated feeling a negative mental health state "All", "Most", or "Some" of the time.**
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1: For individuals that engaged in physical activities in the last 30 days, what was the average number of days they reported having bad mental health? What was the average days for those that did not engage in any activities?**
+
+Start by finding if the variable "menthlth" (number of days with bad mental health) and "exerany2" (Whether or not they exercised in the past 30 days).
+
+```{r}
+#Find if variable "menthlth" and "pa1min_" exists
+grep("menthlth", names(brfss2013), value = TRUE)
+grep("exerany2", names(brfss2013), value = TRUE)
+```
+Here we used the grep command with "value = True" in order for the function to report the any names of columns in the frame that contain the string in the first argument. Otherwise the grep function reports the index of that column.
+
+Ok great, they are both in the data set. Try to add them to a new dataframe
+```{r}
+mentalhealth1 = brfss2013 %>% select(menthlth,exerany2)
+```
+
+Lets take a look at some of the data in this frame.
+
+```{r}
+str(mentalhealth1)
+```
+
+Hmm... many of the menthlth and exerany2 data contain "NA", which is not a category that matters for our question.
+Try to filter these results out.
+
+```{r}
+mentalhealth1 = brfss2013 %>% select(menthlth,exerany2) %>% filter(exerany2 != "NA",menthlth != "NA")
+```
+
+Ok great, this is a lot of data. Lets calculate the average number of days with bad mental health that someone has if they exercise or not. Also, the standard deviation, median, and IQR of each set will be helpful.
+```{r}
+mentalhealth1 %>% group_by(exerany2) %>% summarise(mean_bad_days = mean(menthlth),sd_bad_days=sd(menthlth),med_bad_days = median(menthlth),IQR_bad_days = IQR(menthlth))
+```
+
+Wow! So it looks like the average number of days with bad mental health for those that did engage in physical activity was 2.8, while the average was 4.8 for those that did not engage in physical activity. However, when the standard deviations of the number days with bad health are calculated for both groups. They are quite large, meaning that it is very possible to have no physical activity, but still have good mental health.
+
+Next, lets look at the distribution of the bad mental health days for all of the respondents.
+
+```{r}
+ggplot(mentalhealth1, aes(x=menthlth)) + geom_bar()
+```
+
+This is not even close to a normal distribution. The vast majority of people responded that they have zero days with bad mental health. The second most frequent response is for 30 days of bad mental health, a full month.
+
+**Research quesion 2: What is the average number of bad mental health days for people who engaged in low, medium, and high intensity activities?**
+
+To answer this question, we will first need to filter brfss2013 dataset for only the relevant variables: menthlth,actin11_,actin21_
+
+```{r}
+mentalhealth2 = brfss2013 %>% select(menthlth,actin11_,actin21_)
+```
+
+Now that we have the data in hand. Let's filter out all of the respondents that answered NA to any of the questions.
+
+```{r}
+mentalhealth2 = mentalhealth2 %>% filter(!is.na(menthlth))
+```
+
+We used the !is.na function to filter out the NA data in menthlth.
+
+Now we would like to summarize how many bad mental health days that people who engage in no activities, or low, moderate, or vigorous intensity activities 
+```{r}
+mentalhealth2 %>% group_by(actin11_) %>% summarise(n=n(),mean_bad_days = mean(menthlth),sd_bad_days=sd(menthlth),med_bad_days = median(menthlth),IQR_bad_days = IQR(menthlth))
+
+mentalhealth2 %>% group_by(actin21_) %>% summarise(n=n(),mean_bad_days = mean(menthlth),sd_bad_days=sd(menthlth),med_bad_days = median(menthlth),IQR_bad_days = IQR(menthlth))
+```
+
+It appears that people who engage in vigorous physical activities have the fewest number of days with bad mental health (~2.1 days). Those are listed as "NA", either because they did not engage in a physical activity, or because they did not answer this question have the greatest number of days with bad mental health (~4.3 days). Those who engage in low or moderate intensity activities appear to have a similar number of days with bad mental health (2.6-3.3 days).
+
+**Research quesion 3: For those that do vigorous exercise, versus less than vigorous exercise, what distribution of them felt significantly nervous, hopeless, restless, or depressed in the past 30 days? The term "significantly" implies that the respondent indicated feeling a negative mental health state "All", "Most", or "Some" of the time.**
+
+Lets first make a smaller dataframe to answer this question more efficiently.
+
+Place these in the dataframe: 
+actin11_: Estimated Activity Intensity For First Activity
+actin21_: Estimated Activity Intensity For Second Activity
+misnervs: How Often Feel Nervous Past 30 Days
+mishopls: How Often Feel Hopeless Past 30 Days
+misrstls: How Often Feel Restless Past 30 Days
+misdeprd: How Often Feel Depressed Past 30 Days
+
+For this question, NAs are a problem, since those who exercise vigorously might have responded as NA.
+
+```{r}
+mentalhealth3 = brfss2013 %>% 
+  select(actin11_,actin21_,misnervs,mishopls,misrstls,misdeprd) %>%
+  filter(!is.na(misnervs),!is.na(mishopls),!is.na(misrstls),!is.na(misdeprd)) %>%
+  filter(!is.na(actin11_),!is.na(actin21_))
+```
+
+Ok, there are about 24,000 data points in the frame now. However, we have two columns for intensity, actin11_ and actin21_, corresponding to two different activities. We want to make another column which indicates if one of these two columns indicates vigorous activity.
+
+```{r}
+mentalhealth3 = mentalhealth3 %>% 
+  mutate(vigor = ifelse((actin11_=="Vigorous")|(actin21_=="Vigorous"),"Vigorous","Not Vigorous"))
+```
+
+Ok great! For this question, how many people responded vigorous vs. not vigorous?
+
+```{r}
+mentalhealth3 %>% group_by(vigor) %>% summarise(counts = n())
+```
+
+Around half of the respondents engaged in vigorous exercise, and the other half did not. The question we would like to answer is what proportion of people engaged in vigorous exercise, versus non-vigorous, felt nervous, hopeless, restless, depressed.
+
+The data in misnervs column is categorized as "None", "A little", "Some", "Most", and "All".
+We need to create a new column combining the "Some", Most" and "All" categories. We will define this as being nervous a sig_nificant amount of time in sig_nervs. The same treatment will be applied to misnervs, mishopls, misrstls, and misdeprd.
+
+```{r}
+mentalhealth3 = mentalhealth3 %>%
+  mutate(sig_nervs=ifelse(misnervs!="None" & misnervs!="A little","Significant","Not Significant"))
+mentalhealth3 = mentalhealth3 %>%
+  mutate(sig_hopls=ifelse(mishopls!="None" & mishopls!="A little","Significant","Not Significant"))
+mentalhealth3 = mentalhealth3 %>%
+  mutate(sig_rstls=ifelse(misrstls!="None" & misrstls!="A little","Significant","Not Significant"))
+mentalhealth3 = mentalhealth3 %>%
+  mutate(sig_deprd=ifelse(misdeprd!="None" & misdeprd!="A little","Significant","Not Significant"))
+```
+
+Ok now we are ready to summarise some features of the dataframe.
+
+How many people who vigorously exercise feel nervous, hopeless, restless, or depressed?
+```{r}
+mentalhealth3 %>% group_by(vigor,sig_nervs) %>% summarise(counts = n())
+mentalhealth3 %>% group_by(vigor,sig_hopls) %>% summarise(counts = n())
+mentalhealth3 %>% group_by(vigor,sig_rstls) %>% summarise(counts = n())
+mentalhealth3 %>% group_by(vigor,sig_deprd) %>% summarise(counts = n())
+```
+For those who engage in vigorous exercise, the data seems to show benefits to mental health. Respondents reported significantly less nervousness, hopelessness, restlessness, and depression. 
